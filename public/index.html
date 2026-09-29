@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Irrigation System - Portal & HUD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --hud-neon: #00ffcc;
+      --hud-cyan: #38bdf8;
+      --bg-dark-blue: #020b18;
+      --hud-box-bg: rgba(7, 24, 48, 0.95);
+      --border-cyan: rgba(56, 189, 248, 0.45);
+      --border-dim: rgba(0, 255, 204, 0.25);
+      --hud-warn: #fbbf24;
+      --text-main: #f0f9ff;
+      --text-muted: #7dd3fc;
+      --primary: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark-blue);
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-main);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 50% 10%, #0c3060 0%, transparent 80%),
+        linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+      background-size: 100% 100%, 26px 26px, 26px 26px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Auth Interface */
+    #auth-section {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .auth-card {
+      background: var(--hud-box-bg);
+      border: 1px solid var(--border-cyan);
+      border-radius: 6px;
+      padding: 32px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 0 25px rgba(14, 116, 144, 0.35);
+      position: relative;
+    }
+
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px;
+      width: 10px; height: 10px;
+      border-top: 2px solid var(--hud-neon);
+      border-left: 2px solid var(--hud-neon);
+    }
+    .auth-card::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; right: -1px;
+      width: 10px; height: 10px;
+      border-bottom: 2px solid var(--hud-neon);
+      border-right: 2px solid var(--hud-neon);
+    }
+
+    .auth-tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px dashed var(--border-dim);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--hud-neon);
+      border-bottom-color: var(--hud-neon);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #020b18;
+      border: 1px solid var(--border-cyan);
+      border-radius: 4px;
+      color: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--hud-neon);
+      box-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: rgba(14, 165, 233, 0.2);
+      border: 1px solid var(--hud-cyan);
+      border-radius: 4px;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--hud-cyan);
+      color: #020b18;
+      box-shadow: 0 0 14px var(--hud-cyan);
+    }
+
+    .alert {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid #10b981;
+      color: #6ee7b7;
+    }
+
+    /* Main Dashboard Layout */
+    header {
+      background: var(--hud-box-bg);
+      border-bottom: 1px solid var(--border-cyan);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-tag {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      color: var(--hud-neon);
+      letter-spacing: 1.5px;
+    }
+
+    .user-tag {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border-cyan);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(56, 189, 248, 0.2);
+    }
+
+    .dashboard-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* Gift Bar */
+    .gift-banner {
+      width: 100%;
+      max-width: 1420px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px dashed var(--hud-neon);
+      border-radius: 4px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.15);
+    }
+
+    .gift-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .gift-left span {
+      font-size: 26px;
+    }
+
+    .gift-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      color: var(--hud-neon);
+      letter-spacing: 1px;
+    }
+
+    .gift-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    /* Embedded Banner Styles */
+    .landscape-board {
+      width: 100%;
+      max-width: 1420px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .rect-box {
+      background: var(--hud-box-bg);
+      border: 1px solid var(--border-cyan);
+      border-radius: 4px;
+      padding: 16px 18px;
+      position: relative;
+      box-shadow: 0 0 20px rgba(14, 116, 144, 0.25);
+    }
+
+    .rect-box::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px;
+      width: 8px; height: 8px;
+      border-top: 2px solid var(--hud-neon);
+      border-left: 2px solid var(--hud-neon);
+    }
+    .rect-box::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; right: -1px;
+      width: 8px; height: 8px;
+      border-bottom: 2px solid var(--hud-neon);
+      border-right: 2px solid var(--hud-neon);
+    }
+
+    .box-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--hud-cyan);
+      letter-spacing: 1.5px;
+      border-bottom: 1px dashed var(--border-dim);
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .header-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 14px;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(20px, 2.3vw, 29px);
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 1.5px;
+      text-shadow: 0 0 14px rgba(56, 189, 248, 0.7);
+      margin-bottom: 4px;
+    }
+
+    .sub-head {
+      font-size: 12px;
+      color: var(--hud-neon);
+    }
+
+    .status-line {
+      font-size: 11px;
+      line-height: 1.7;
+      color: #bae6fd;
+    }
+    .status-ok { color: var(--hud-neon); font-weight: bold; }
+
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .unit {
+      margin-bottom: 12px;
+    }
+    .unit-title {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      display: block;
+      margin-bottom: 3px;
+      font-weight: bold;
+    }
+    .unit-body {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #f0f9ff;
+    }
+
+    .graphs-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .graph-item {
+      background: rgba(14, 165, 233, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 4px;
+      padding: 8px 10px;
+    }
+
+    .graph-label {
+      font-size: 10px;
+      color: var(--hud-cyan);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .segmented-bar {
+      display: flex;
+      height: 10px;
+      border-radius: 2px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.08);
+      margin-bottom: 6px;
+    }
+    .seg-yes { background: #38bdf8; }
+    .seg-maybe { background: #fbbf24; }
+    .seg-no { background: #334155; }
+
+    .graph-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      color: var(--text-muted);
+    }
+
+    .meter-unit {
+      margin-bottom: 8px;
+    }
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      margin-bottom: 2px;
+    }
+    .meter-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .meter-fill {
+      height: 100%;
+      background: var(--hud-neon);
+      box-shadow: 0 0 6px var(--hud-neon);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .footer-col strong {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      color: #ffffff;
+      display: block;
+      margin-top: 2px;
+    }
+    .footer-col span {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    /* Modal for Gift */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 11, 24, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: var(--hud-box-bg);
+      border: 1px solid var(--border-cyan);
+      border-radius: 6px;
+      padding: 28px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 0 25px rgba(0, 255, 204, 0.3);
+    }
+
+    @media (max-width: 1024px) {
+      .columns-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .header-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .columns-grid {
+        grid-template-columns: 1fr;
+      }
+      .footer-grid {
+        grid-template-columns: 1fr;
+        text-align: left !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- AUTH SECTION -->
+  <section id="auth-section">
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button id="tab-login-btn" class="tab-btn active" onclick="switchAuthTab('login')">PORTAL ACCESS</button>
+        <button id="tab-reg-btn" class="tab-btn" onclick="switchAuthTab('register')">REGISTER PARTNER</button>
+      </div>
+
+      <div id="auth-alert" class="alert hidden"></div>
+
+      <!-- Login Form -->
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>SYSTEM USERNAME / EMAIL</label>
+          <input type="text" id="login-user" required placeholder="themobileshopmfp@gmail.com" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label>ACCESS KEY / PASSWORD</label>
+          <input type="password" id="login-pass" required placeholder="Enter password" autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn">AUTHENTICATE &amp; ENTER</button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="hidden" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label>CHOOSE PARTNER USERNAME</label>
+          <input type="text" id="reg-user" required placeholder="e.g. rishikesh" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label>SYSTEM MASTER KEY (Authorization)</label>
+          <input type="password" id="reg-key" required placeholder="Secret invite key" />
+        </div>
+        <div class="form-group">
+          <label>SET NEW PASSWORD</label>
+          <input type="password" id="reg-pass" required placeholder="Enter password" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn">ENROLL USER</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- DASHBOARD & BANNER SECTION -->
+  <div id="dashboard-section" class="hidden">
+    <header>
+      <div class="header-tag">ATL LABS // AUTOMATIC IRRIGATION SYSTEM</div>
+      <div class="user-tag">
+        <span>ACTIVE OPERATOR: <strong id="active-username" style="color: var(--hud-neon);">themobileshopmfp@gmail.com</strong></span>
+        <button class="btn-secondary" onclick="handleLogout()">TERMINATE SESSION</button>
+      </div>
+    </header>
+
+    <div class="dashboard-body">
+
+      <!-- Confidential Gift Area -->
+      <div class="gift-banner">
+        <div class="gift-left">
+          <span>🎁</span>
+          <div>
+            <div class="gift-title">EXCLUSIVE PARTNER REWARD &amp; ASSETS</div>
+            <div class="gift-sub">Encrypted access to raw telemetry schematics, NCSC documentation &amp; verification token.</div>
+          </div>
+        </div>
+        <button class="btn" style="width: auto; padding: 8px 18px;" onclick="openGiftModal()">UNWRAP REWARD</button>
+      </div>
+
+      <!-- EMBEDDED HUD BANNER -->
+      <div class="landscape-board">
+
+        <!-- ROW 1: HEADER & SYSTEM STATUS -->
+        <div class="header-grid">
+          <div class="rect-box">
+            <h1>AUTOMATIC IRRIGATION SYSTEM</h1>
+            <div class="sub-head">&gt; PRACTICAL STEM PROJECT: HOW CAN PLANT RECEIVE WATER WHEN IT ACTUALLY NEEDS IT?[span_0](start_span)[span_0](end_span)</div>
+          </div>
+          <div class="rect-box">
+            <div class="box-title">SYSTEM STATUS</div>
+            <div class="status-line">CONTROLLER: <span class="status-ok">Arduino UNO Processing Unit</span>[span_1](start_span)[span_1](end_span)</div>
+            <div class="status-line">FEEDBACK: <span class="status-ok">Soil Moisture Sensor Active</span>[span_2](start_span)[span_2](end_span)</div>
+            <div class="status-line">ACTUATION: <span class="status-ok">Relay Switched Water Pump</span>[span_3](start_span)[span_3](end_span)</div>
+          </div>
+        </div>
+
+        <!-- ROW 2: 4 LANDSCAPE SECTIONS -->
+        <div class="columns-grid">
+
+          <!-- SECTION: PROBLEM STATEMENT -->
+          <div class="rect-box">
+            <div class="box-title">PROBLEM STATEMENT</div>
+            <div class="unit">
+              <span class="unit-title">PROBLEM AND NEED</span>
+              <div class="unit-body">Plants frequently suffer stress or die due to prolonged periods of dryness, yet manual watering creates its own set of challenges, often leading to overwatering, wasted water resources, and degraded soil conditions over time.[span_4](start_span)[span_4](end_span)</div>
+            </div>
+            <div class="unit">
+              <span class="unit-title">HUMAN &amp; TIMER LIMITATIONS</span>
+              <div class="unit-body">Relying on human memory inevitably causes inconsistent watering schedules[span_5](start_span)[span_5](end_span). While simple timer-based systems offer automation by operating at predetermined intervals, they function without real feedback—running regardless of whether soil is already saturated.[span_6](start_span)[span_6](end_span)</div>
+            </div>
+            <div class="unit">
+              <span class="unit-title">SYSTEM DEMAND</span>
+              <div class="unit-body">An intelligent system is needed that actively reads the plant's immediate environment, removing human error and ensuring water is delivered based on actual soil conditions rather than fixed schedules.[span_7](start_span)[span_7](end_span)</div>
+            </div>
+          </div>
+
+          <!-- SECTION: SURVEY REPORTS -->
+          <div class="rect-box">
+            <div class="box-title">SURVEY REPORTS</div>
+            <div class="graphs-container">
+              
+              <!-- Q5: Automatic System Utility -->
+              <div class="graph-item">
+                <div class="graph-label">Would a system that automatically waters plants when dry be useful?[span_8](start_span)[span_8](end_span)</div>
+                <div class="segmented-bar">
+                  <div class="seg-yes" style="width: 100%;"></div>
+                </div>
+                <div class="graph-legend">
+                  <span>Yes: 100.0%</span>
+                  <span>No: 0.0%</span>
+                </div>
+              </div>
+
+              <!-- Q2: Water Wastage Reduction -->
+              <div class="graph-item">
+                <div class="graph-label">Do you think automatic watering could reduce water wastage?[span_9](start_span)[span_9](end_span)</div>
+                <div class="segmented-bar">
+                  <div class="seg-yes" style="width: 81%;"></div>
+                  <div class="seg-maybe" style="width: 19%;"></div>
+                </div>
+                <div class="graph-legend">
+                  <span>Yes: 81.0%</span>
+                  <span>Maybe: 19.0%</span>
+                </div>
+              </div>
+
+              <!-- Q1: Dependence of others -->
+              <div class="graph-item">
+                <div class="graph-label">Depend on someone else to water plants when away?[span_10](start_span)[span_10](end_span)</div>
+                <div class="segmented-bar">
+                  <div class="seg-yes" style="width: 57.1%;"></div>
+                  <div class="seg-no" style="width: 38.1%;"></div>
+                  <div class="seg-maybe" style="width: 4.8%;"></div>
+                </div>
+                <div class="graph-legend">
+                  <span>Yes: 57.1%</span>
+                  <span>Sometimes: 38.1%</span>
+                </div>
+              </div>
+
+              <!-- Q3: Water Imbalance Frequency -->
+              <div class="graph-item">
+                <div class="graph-label">Do plants receive too much or too less water?[span_11](start_span)[span_11](end_span)</div>
+                <div class="segmented-bar">
+                  <div class="seg-yes" style="width: 61.9%;"></div>
+                  <div class="seg-maybe" style="width: 38.1%;"></div>
+                </div>
+                <div class="graph-legend">
+                  <span>Frequent: 61.9%</span>
+                  <span>Sometimes: 38.1%</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SECTION: INNOVATIVE SOLUTION -->
+          <div class="rect-box">
+            <div class="box-title">INNOVATIVE SOLUTION</div>
+            <div class="unit">
+              <span class="unit-title">CLOSED-LOOP PROCESS</span>
+              <div class="unit-body">Establishes a reliable, data-driven closed-loop process by continuously monitoring environmental parameters in real time including soil moisture, ambient temperature, humidity, and light levels.[span_12](start_span)[span_12](end_span)</div>
+            </div>
+            <div class="unit">
+              <span class="unit-title">AUTONOMOUS TRIGGER</span>
+              <div class="unit-body">When sensor readings indicate conditions have dropped below optimal thresholds, the program autonomously triggers a water pump to supply the precise hydration needed and shuts off once restored.[span_13](start_span)[span_13](end_span)</div>
+            </div>
+            <div class="unit">
+              <span class="unit-title">TRIPLE-SENSOR TRACKING</span>
+              <div class="unit-body">Integrates a multi-probe sensing array positioned across different root depths, eliminating localized dry spots and reading errors caused by uneven soil texture or improper probe placement.[span_14](start_span)[span_14](end_span)</div>
+            </div>
+          </div>
+
+          <!-- SECTION: BUDGET & CONCLUSION -->
+          <div class="rect-box">
+            <div class="box-title">BUDGET &amp; CONCLUSION</div>
+            <div class="unit-title" style="margin-bottom: 4px;">PROJECT BUDGET (~$15 ESTIMATED PRICE)[span_15](start_span)[span_15](end_span)</div>
+            <div class="meter-unit">
+              <div class="meter-label"><span>Sensors (Costly component)[span_16](start_span)[span_16](end_span)</span><span>55.1%[span_17](start_span)[span_17](end_span)</span></div>
+              <div class="meter-bg"><div class="meter-fill" style="width: 55.1%;"></div></div>
+            </div>
+            <div class="meter-unit">
+              <div class="meter-label"><span>Microcontroller (Control chips)[span_18](start_span)[span_18](end_span)</span><span>20.4%[span_19](start_span)[span_19](end_span)</span></div>
+              <div class="meter-bg"><div class="meter-fill" style="width: 20.4%;"></div></div>
+            </div>
+            <div class="meter-unit">
+              <div class="meter-label"><span>Irrigation Supplies (Pipes/Pumps)[span_20](start_span)[span_20](end_span)</span><span>16.3%[span_21](start_span)[span_21](end_span)</span></div>
+              <div class="meter-bg"><div class="meter-fill" style="width: 16.3%;"></div></div>
+            </div>
+            <div class="meter-unit">
+              <div class="meter-label"><span>Fitments Parts (Source attach)[span_22](start_span)[span_22](end_span)</span><span>8.2%[span_23](start_span)[span_23](end_span)</span></div>
+              <div class="meter-bg"><div class="meter-fill" style="width: 8.2%;"></div></div>
+            </div>
+            <div class="unit" style="margin-top: 10px;">
+              <span class="unit-title">CENTRAL LESSON</span>
+              <div class="unit-body">Technology becomes useful when it responds to real conditions, solves a real practical problem, and is designed with safety, reliability, and resource conservation.[span_24](start_span)[span_24](end_span)</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ROW 3: FOOTER INFO -->
+        <div class="rect-box">
+          <div class="footer-grid">
+            <div class="footer-col">
+              <span>PRESENTED BY</span>
+              <strong>CHAITANYA SHRIVASTAV &amp; RISHIKESH CHOUDHARY</strong>[span_25](start_span)[span_25](end_span)
+            </div>
+            <div class="footer-col" style="text-align: right;">
+              <span>CONTACT &amp; UPLINK</span>
+              <strong>9304538112 // themobileshopmfp@gmail.com</strong>[span_26](start_span)[span_26](end_span)
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- GIFT MODAL -->
+  <div id="gift-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div style="font-size: 3rem; margin-bottom: 8px;">🎁</div>
+      <h2 style="font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--hud-neon); margin-bottom: 10px;">PARTNER SURPRISE GIFT UNLOCKED</h2>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 16px;">
+        Direct access granted for NCSC 2026 project verification and hardware assembly blueprints.
+      </p>
+      <div style="background: rgba(0, 255, 204, 0.08); border: 1px dashed var(--hud-neon); padding: 14px; border-radius: 4px; margin-bottom: 20px;">
+        <span style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 4px;">SECURE PARTNER KEY</span>
+        <code style="color: var(--hud-neon); font-size: 13px; font-weight: bold;">NCSC-AUTO-IRR-25-CHAITANYA</code>
+      </div>
+      <button class="btn" onclick="closeGiftModal()">CLOSE REVEAL</button>
+    </div>
+  </div>
+
+  <!-- PORTAL SCRIPT -->
+  <script>
+    const MASTER_INVITE_KEY = "NCSC2026";
+
+    // Setup default account credentials
+    function initCredentials() {
+      if (!localStorage.getItem("irrigation_vault")) {
+        const accounts = {
+          "themobileshopmfp@gmail.com": "25 chaitanya@ncsc"
+        };
+        localStorage.setItem("irrigation_vault", JSON.stringify(accounts));
+      }
+    }
+
+    function switchAuthTab(mode) {
+      const loginForm = document.getElementById("login-form");
+      const regForm = document.getElementById("register-form");
+      const loginBtn = document.getElementById("tab-login-btn");
+      const regBtn = document.getElementById("tab-reg-btn");
+      const alertBox = document.getElementById("auth-alert");
+
+      alertBox.className = "alert hidden";
+
+      if (mode === "login") {
+        loginForm.classList.remove("hidden");
+        regForm.classList.add("hidden");
+        loginBtn.classList.add("active");
+        regBtn.classList.remove("active");
+      } else {
+        loginForm.classList.add("hidden");
+        regForm.classList.remove("hidden");
+        loginBtn.classList.remove("active");
+        regBtn.classList.add("active");
+      }
+    }
+
+    function displayMessage(msg, isSuccess = false) {
+      const box = document.getElementById("auth-alert");
+      box.textContent = msg;
+      box.className = alert ${isSuccess ? "alert-success" : "alert-error"};
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById("login-user").value.trim().toLowerCase();
+      const pass = document.getElementById("login-pass").value;
+      const accounts = JSON.parse(localStorage.getItem("irrigation_vault") || "{}");
+
+      if (accounts[user] && accounts[user] === pass) {
+        sessionStorage.setItem("current_session_user", user);
+        renderDashboard(user);
+      } else {
+        displayMessage("ACCESS DENIED: Invalid username or password.");
+      }
+    }
+
+    function handleRegister(e) {
+      e.preventDefault();
+      const user = document.getElementById("reg-user").value.trim().toLowerCase();
+      const key = document.getElementById("reg-key").value.trim();
+      const pass = document.getElementById("reg-pass").value;
+
+      if (key !== MASTER_INVITE_KEY) {
+        displayMessage("AUTHORIZATION ERROR: Master key mismatch.");
+        return;
+      }
+
+      const accounts = JSON.parse(localStorage.getItem("irrigation_vault") || "{}");
+      if (accounts[user]) {
+        displayMessage("USER CONFLICT: Username already registered.");
+        return;
+      }
+
+      accounts[user] = pass;
+      localStorage.setItem("irrigation_vault", JSON.stringify(accounts));
+      displayMessage("REGISTRATION GRANTED. Switch to portal login.", true);
+      setTimeout(() => switchAuthTab("login"), 1200);
+    }
+
+    function renderDashboard(user) {
+      document.getElementById("auth-section").classList.add("hidden");
+      document.getElementById("dashboard-section").classList.remove("hidden");
+      document.getElementById("active-username").textContent = user;
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem("current_session_user");
+      document.getElementById("auth-section").classList.remove("hidden");
+      document.getElementById("dashboard-section").classList.add("hidden");
+    }
+
+    function openGiftModal() {
+      document.getElementById("gift-modal").classList.remove("hidden");
+    }
+
+    function closeGiftModal() {
+      document.getElementById("gift-modal").classList.add("hidden");
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      initCredentials();
+      const active = sessionStorage.getItem("current_session_user");
+      if (active) {
+        renderDashboard(active);
+      }
+    });
+  </script>
+</body>
+</html>
