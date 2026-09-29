@@ -836,45 +836,79 @@
     });
   </script>
 </body>
+  </body>
   <script>
-  // 1. Wait for the page layout to fully load
-  document.addEventListener('DOMContentLoaded', () => {
-    
-    // Find the login/registration forms and alerts inside your HTML layout
-    // (Note: Make sure your HTML <form> elements have these matching IDs, or adjust them below)
-    const registerForm = document.querySelector('#register-form') || document.querySelector('form');
-    
-    if (registerForm) {
-      registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Stop the page from reloading automatically
-        
-        // Grab the username and password inputted by the user
-        const usernameInput = registerForm.querySelector('input[type="text"]')?.value;
-        const passwordInput = registerForm.querySelector('input[type="password"]')?.value;
-        
-        try {
-          // Send the credentials securely to your Render server engine
-          const response = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: usernameInput, password: passwordInput })
-          });
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Intercept all forms on the page to prevent the reload loop
+      const forms = document.querySelectorAll('form');
+      
+      forms.forEach(authForm => {
+        authForm.addEventListener('submit', async (e) => {
+          e.preventDefault(); // Stop the browser from reloading the Render page!
+          e.stopPropagation();
           
-          const data = await response.json();
+          // 2. Safely grab the text fields typed by the user
+          const usernameInput = authForm.querySelector('input[type="text"]')?.value || "";
+          const passwordInput = authForm.querySelector('input[type="password"]')?.value || "";
           
-          if (data.success) {
-            alert("✨ Access Granted: " + data.message);
-            // Optional: Redirect the user into the main HUD panel here
-            // document.getElementById('auth-section').classList.add('hidden');
-          } else {
-            alert("❌ Access Denied: " + data.message);
+          if (!usernameInput || !passwordInput) {
+            alert("⚠️ Alert: Please enter both username and password configurations.");
+            return;
           }
-        } catch (error) {
-          console.error("Connection Error:", error);
-          alert("⚡ System Warning: Cannot establish link to backend server.");
-        }
+          
+          try {
+            // 3. Send the data payload directly to your Render server background
+            const response = await fetch('/api/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: usernameInput, password: passwordInput })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              alert("🔒 ACCESS GRANTED: " + data.message);
+              
+              // 4. Force override the layout classes to instantly reveal your Smart Irrigation HUD panels
+              const authSection = document.getElementById('auth-section');
+              if (authSection) {
+                authSection.setAttribute('style', 'display: none !important;');
+              }
+              
+              // Unhide any hidden dashboard containers
+              document.querySelector('header')?.classList.remove('hidden');
+              document.querySelectorAll('.dashboard-body, .landscape-board').forEach(el => {
+                el.classList.remove('hidden');
+                el.setAttribute('style', 'display: flex !important;');
+              });
+            } else {
+              alert("⚠️ AUTH ERROR: " + data.message);
+            }
+          } catch (error) {
+            console.error(error);
+            alert("⚡ LINK CRITICAL: Server connection interrupted. The backend might be waking up from sleep tier.");
+          }
+        });
       });
-    }
-  });
-</script>
+
+      // --- TAB SWITCHER CONTROLLER ---
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      const mainBtn = document.querySelector('.btn');
+      if (tabButtons.length > 0 && mainBtn) {
+        tabButtons.forEach(button => {
+          button.addEventListener('click', (e) => {
+            e.preventDefault();
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            if (button.textContent.trim().toUpperCase() === 'REGISTER') {
+              mainBtn.textContent = 'INITIALIZE ACCOUNT';
+            } else {
+              mainBtn.textContent = 'AUTHORIZE LOGIN';
+            }
+          });
+        });
+      }
+    });
+  </script>
 </html>
